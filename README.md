@@ -23,10 +23,10 @@
     <summary>Table of Contents</summary>
     <ol>
         <li>
-        <a href="#about">About The Project</a>
-        <ul>
-            <li><a href="#built-with">Built With</a></li>
-        </ul>
+            <a href="#about">About The Project</a>
+            <ul>
+                <li><a href="#built-with">Built With</a></li>
+            </ul>
         </li>
         <li>
         <a href="#getting-started">Getting Started</a>
@@ -37,7 +37,12 @@
         </li>
         <li><a href="#usage">Usage</a></li>
         <!-- <li><a href="#roadmap">Roadmap</a></li> -->
-        <li><a href="#contributing">Contributing</a></li>
+        <li>
+            <a href="#contributing">Contributing</a>
+            <ul>
+                <li><a href="#security-policy">Security Policy</a></li>
+            </ul>
+        </li>
         <li><a href="#license">License</a></li>
         <li><a href="#contact">Contact</a></li>
         <!-- <li><a href="#acknowledgments">Acknowledgments</a></li> -->
@@ -91,14 +96,14 @@ cryptsetup open /tmp/crypto_loop.bin crypto_loop
 mount /dev/mapper/crypto_loop /mnt
 ```
 
-2. Use [`dd`](https://man7.org/linux/man-pages/man1/dd.1.html) to create detached headers and a keyfile.
+2. Use `dd`(https://man7.org/linux/man-pages/man1/dd.1.html) to create detached headers and a keyfile.
 ```
 dd if=/dev/zero of=/mnt/nvme0n1_header.bin bs=4M count=1
 dd if=/dev/zero of=/mnt/sda_header.bin bs=4M count=1
 dd if=/dev/urandom of=/mnt/crypto_keyfile.bin bs=1024 count=1
 ```
 
-4. Format the drives using [`cryptsetup`](https://man7.org/linux/man-pages/man8/cryptsetup.8.html) with detached header and keyfile.
+4. Format the drives using `cryptsetup` with detached header and keyfile.
 ```bash
 cryptsetup luksFormat --header=/mnt/nvme0n1_header.bin --key-file=/mnt/crypto_keyfile.bin --keyfile-offset=0 --keyfile-size=512 /dev/nvme0n1
 
@@ -108,7 +113,7 @@ cryptsetup luksFormat --header=/mnt/sda_header.bin --key-file=/mnt/crypto_keyfil
 cryptsetup luksFormat /dev/sdb2
 ```
 
-5. Open the crypts, then set up [`LVM`](https://wiki.archlinux.org/index.php/LVM).
+5. Open the crypts, then set up [LVM](https://wiki.archlinux.org/index.php/LVM).
 ```bash
 cryptsetup open --header=/mnt/nvme0n1_header.bin --key-file=/mnt/crypto_keyfile.bin --keyfile-offset=0 --keyfile-size=512 /dev/nvme0n1 crypt_lvm
 
@@ -165,7 +170,7 @@ git clone git@github.com:nicolas-mark/deniable-initcpio
 makepkg -Acs
 ```
 
-3. Add the hook and loop to your `mkinitcpio.conf`.
+3. Modify `mkinitcpio.conf` to include appropriate module, loop file, and initcpio hook.
 ```
 MODULES=( loop )
 ...
@@ -202,10 +207,15 @@ Contributions are most welcome and make the open source community such a great p
 4. Push the Changes (`git push origin feature/noice-feature`)
 5. Open a Pull Request
 
+<!-- SECURITY POLICY -->
+### Security Policy
+
+To report vulnerabilities or security concerns, please read [SECURITY](docs/SECURITY.md).
+
 <!-- LICENSE -->
 ## License
 
-Distributed under the MIT License. See [`LICENSE`](LICENSE.md) for more information.
+Distributed under the MIT License. See [LICENSE](docs/LICENSE.md) for more information.
 
 <!-- CONTACT -->
 ## Contact
