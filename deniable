@@ -1,0 +1,128 @@
+#!/usr/bin/ash
+
+run_hook() {
+    modprobe -a -q dm-crypt >/dev/null 2>&1
+    modprobe -a -q loop >/dev/null 2>&1
+    [ "${quiet}" = "y" ] && CSQUIET=">/dev/null"
+
+    # Get the loop file key if necessary.
+    cloopkey="/crypto_keyfile.bin"
+    cloopname="crypto_loop"
+    if [ -n "${lokey}" ]; then
+        IFS=: read cloopkey lkarg1 lkarg2 <<EOF
+$lokey
+EOF
+        if resolved=$(resolve_device "${cloopkey}" ${rootdelay}); then
+            # Read raw data from the block device
+            # lkarg1 is numeric: lkarg1=offset, lkarg2=length
+            dd if="$resolved" of="$cloopkey" bs=1 skip="$lkarg1" count="$lkarg2" >/dev/null 2>&1
+        fi
+        [ ! -f ${cloopkey} ] && echo "Loop key could not be opened."
+    fi
+
+    # Get crypt loop file
+    cloopfile="/crypto_loop.bin"
+    if [ -n "$cryptloop" ]; then
+        IFS=: read cloopdev clarg1 clarg2 <<EOF
+$cryptloop
+EOF
+        if [ "$cloopdev" = "rootfs" ]; then
+            cloopfile=$clarg1
+        elif resolved=$(resolve_device "${cloopdev}" ${rootdelay}); then
+            case ${clarg1} in
+                *[!0-9]*)
+                    # Use a file on the device
+                    # clarg1 not numeric: clarg1=filesystem, clarg2=path
+                    mkdir /cloop
+                    mount -r -t "$clarg1" "$resolved" /cloop
+                    dd if="/cloop/$clarg2" of="$cloopfile" >/dev/null 2>&1
+                    umount /cloop
+                    ;;
+                *)
+                    # Read raw data from the block device
+                    # clarg1 is numeric: clarg1=offset, clarg2=length
+                    dd if="$resolved" of="$cloopfile" bs=1 skip="$clarg1" count="$clarg2" >/dev/null 2>&1
+                    ;;
+            esac
+        fi
+        [ ! -f ${cloopfile} ] && echo "Loop could not be opened."
+        return 1
+    fi
+
+    # Modify to allow several devices
+    if [ -n "${cryptdevice}" ]; then
+        IFS=: read cryptdev cryptname cryptheader cryptkey cryptoptions <<EOF
+$cryptdevice
+EOF
+    fi
+
+    # The crypt has been set up
+    if [ -b "/dev/mapper/${cryptname}" ]; then
+        echo "Device ${cryptname} already exists."
+        return 0
+    fi
+
+    # Read any crypt options
+    set -f
+    OLDIFS="$IFS"; IFS=,
+    for cryptopt in ${cryptoptions}; do
+        case ${cryptopt} in
+            allow-discards)
+                cryptargs="${cryptargs} --allow-discards"
+                ;;
+            *)
+                echo "Encryption option '${cryptopt}' not known." >&2
+                ;;
+        esac
+    done
+    set +f
+    IFS="$OLDIFS"
+    unset OLDIFS
+
+    if cryptsetup isLuks ${cloopfile} >/dev/null 2>&1; then
+        dopass=1
+        # If keyfile exists, use it
+        if [ -f ${cloopkey} ]; then
+            if eval cryptsetup --key-file ${cloopkey} open ${cloopfile} ${cloopname} ${CSQUIET}; then
+                dopass=0
+            else
+                echo -e "Invalid keyfile. Reverting to passphrase.\n"
+            fi
+        fi
+        if [ ${dopass} -gt 0 ]; then
+            echo "Enter a valid passphrase to access the ${cloopname} loop:"
+
+            # Loop until valid password is provided.
+            while ! eval cryptsetup open ${cloopfile} ${cloopname} ${CSQUIET}; do
+                sleep 2;
+            done
+        fi
+        [ -e "/dev/mapper/${cloopname}" ] && mount -r "/dev/mapper/${cloopname}" /cloop
+    fi
+
+    if resolved=$(resolve_device "${cryptdev}" ${rootdelay}); then
+        if cryptsetup --header="/cloop/${cheader}" ${resolved} >/dev/null 2>&1
+            if [ -f ${ckeyfile} ]; then
+                eval cryptsetup --key-file ${ckeyfile} --header open ${resolved} ${cryptname} ${cryptargs} ${CSQUIET}; then
+            else
+                echo "Invalid keyfile. Check ${cloopname} and try again."
+            fi
+
+
+
+    rm -f ${cloopfile} ${cloopkey}
+
+
+
+
+    # mkdir -p /mnt
+    # cryptsetup open /secret.img cryptkey
+    # mount /dev/mapper/cryptkey /mnt
+    # cryptsetup --header /mnt/nvme_header.bin --key-file=/mnt/crypto_keyfile.bin --keyfile-offset 512 open /dev/nvme0n1 cryptlvm
+    # cryptsetup --header /mnt/sda_header.bin --key-file=/mnt/crypto_keyfile.bin --keyfile-size=512 open /dev/sda cryptext
+    
+    # umount /mnt
+    # cryptsetup close cryptkey
+} 
+# vim: set ft=sh ts=4 sw=4 et:
+
