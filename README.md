@@ -2,7 +2,7 @@
 <br/>
 <p align="center">
     <a href="https://github.com/nicolas-mark/deniable-initcpio">
-        <img src="images/logo.png" alt="Logo" width="80" height="80">
+        <img src="docs/logo.png" alt="Logo" width="80" height="80">
     </a>
     <h3 align="center">Deniable Encryption Initcpio</h3>
     <p align="center">
@@ -45,14 +45,13 @@
         </li>
         <li><a href="#license">License</a></li>
         <li><a href="#contact">Contact</a></li>
-        <!-- <li><a href="#acknowledgments">Acknowledgments</a></li> -->
     </ol>
 </details>
 
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-Although there exists an `encrypt` initcpio hook, this didn't suit the requirements for achieving [full-disk encryption](https://wiki.archlinux.org/index.php/Dm-crypt/Encrypting_an_entire_system) with [plausible deniability](https://en.wikipedia.org/wiki/Plausible_deniability). The purpose of this hook is to achieve plausible deniability using a LUKS-encrypted loop device, stored on an encrypted boot partition, containing:
+Although there exists an `encrypt` hook, this doesn't suit the requirements for achieving [full-disk encryption](https://wiki.archlinux.org/index.php/Dm-crypt/Encrypting_an_entire_system) with [plausible deniability](https://en.wikipedia.org/wiki/Plausible_deniability). The purpose of this hook is to achieve plausible deniability using a LUKS-encrypted loop device, stored on an encrypted and removable boot partition, containing:
 * Detached headers
 * Keyfile
 
@@ -66,14 +65,14 @@ This initcpio hook is written in Bash.
 <!-- GETTING STARTED -->
 ## Getting Started
 
-This is an example of how to set up full-disk encryption with plausible deniability using the `deniable` hook. The following block devices will be used in this example:
+Here is an example of how to set up full-disk encryption with plausible deniability using the `deniable` hook. The following block devices will be used in this example:
 * **nvme0n1** - m.2 SSD
 * **sda** - SATA SSD
 * **sdb** - USB (contains encrypted boot and efi)
 
 ### Prerequisites
 
-You should have a USB containing the encrypted boot partition and an EFI partition. The system drives should be encrypted with detached headers, which can be stored in a LUKS-encrypted loop device in the initramfs.
+You should have a removable drive containing the encrypted boot partition and EFI partition. The system drives should be encrypted with detached headers, which can be stored in a LUKS-encrypted loop device in the initramfs.
 
 <br/>
 <details open="open">
@@ -96,7 +95,7 @@ cryptsetup open /tmp/crypto_loop.bin crypto_loop
 mount /dev/mapper/crypto_loop /mnt
 ```
 
-2. Use `dd`(https://man7.org/linux/man-pages/man1/dd.1.html) to create detached headers and a keyfile.
+2. Use [`dd`](https://man7.org/linux/man-pages/man1/dd.1.html) to create detached headers and a keyfile.
 ```
 dd if=/dev/zero of=/mnt/nvme0n1_header.bin bs=4M count=1
 dd if=/dev/zero of=/mnt/sda_header.bin bs=4M count=1
@@ -172,7 +171,7 @@ makepkg -Acs
 
 3. Modify `mkinitcpio.conf` to include appropriate module, loop file, and initcpio hook.
 ```
-MODULES=( loop )
+MODULES=( loop ... )
 ...
 FILES=( /crypto_loop.bin )
 ...
@@ -181,25 +180,32 @@ HOOKS=( base udev autodetect modconf block deniable lvm2 filesystems keyboard fs
 
 4. Configure the boot loader.
 ```
+GRUB_ENABLE_CRYPTODISK=y
 ```
 
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-This hook can be used with the encrypted loop in the initramfs
+This hook can be used with the encrypted loop stored in the initramfs
 ```
-cryptloop=rootfs:/crypto_loop ...
+cryptloop=rootfs:/crypto_loop
 ```
 
 or on a separate drive altogether
 ```
-cryptloop=UUID=device-uuid:/crypto_loop ...
+cryptloop=UUID=device-uuid:/crypto_loop 
+```
+
+Specify which devices to decrypt in the following format, device:name:header:offset:keysize:options
+e.g.
+```
+cryptdevices=sda:crypt_home:sda_header.bin:0:512:allow-discards,readonly;nvme0n1:crypt_root:nvme_header:512:512:allow-discards
 ```
 
 <!-- CONTRIBUTING -->
 ## Contributing
 
-Contributions are most welcome and make the open source community such a great place to learn, create, and get inspired. Any contributions are most welcome.
+Contributions are most welcome and make the open source community a great place to learn, create, and get inspired. Any contributions are most welcome.
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/noice-feature`)
@@ -215,7 +221,7 @@ To report vulnerabilities or security concerns, please read [SECURITY](docs/SECU
 <!-- LICENSE -->
 ## License
 
-Distributed under the MIT License. See [LICENSE](docs/LICENSE.md) for more information.
+Distributed under the GPL3 License. See [LICENSE](docs/LICENSE.md) for more information.
 
 <!-- CONTACT -->
 ## Contact
