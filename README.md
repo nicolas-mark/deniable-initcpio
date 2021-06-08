@@ -51,11 +51,11 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-Although there exists an `encrypt` hook, this doesn't suit the requirements for achieving [full-disk encryption](https://wiki.archlinux.org/index.php/Dm-crypt/Encrypting_an_entire_system) with [plausible deniability](https://en.wikipedia.org/wiki/Plausible_deniability). The purpose of this hook is to achieve plausible deniability using a LUKS-encrypted loop device, stored on an encrypted and removable boot partition, containing:
+Although there exists an `encrypt` hook, this doesn't suit the requirements for achieving [full-disk encryption](https://wiki.archlinux.org/index.php/Dm-crypt/Encrypting_an_entire_system) with [plausible deniability](https://en.wikipedia.org/wiki/Plausible_deniability) as the headers must be separated from the device. The purpose of this hook is to achieve plausible deniability using a LUKS-encrypted loop device stored on an encrypted and removable boot partition, containing:
 * Detached headers
 * Keyfile
 
-The hook will then use these to mount the block devices.
+The hook will then use the contents of this loop device to mount the LVM contained on the block devices specified in the kernel parameters.
 
 ### Built With
 
@@ -65,54 +65,87 @@ This initcpio hook is written in Bash.
 <!-- GETTING STARTED -->
 ## Getting Started
 
-Here is an example of how to set up full-disk encryption with plausible deniability using the `deniable` hook. The following block devices will be used in this example:
+Plausible deniability is achieved using the `deniable` hook by storing detached headers and a keyfile in an encrypted loop device. This loop device is contained within the initramfs, which should be stored on an encrypted boot partition on a removable USB.
+
+Below is an example setting up full-disk encryption with plausible deniability using the `deniable` hook. The following block devices will be used in this example:
 * **nvme0n1** - m.2 SSD
 * **sda** - SATA SSD
 * **sdb** - USB (contains encrypted boot and efi)
 
 ### Prerequisites
 
-You should have a removable drive containing the encrypted boot partition and EFI partition. The system drives should be encrypted with detached headers, which can be stored in a LUKS-encrypted loop device in the initramfs.
+You should have a removable drive containing the encrypted boot partition and EFI partition. An encrypted loop device should be created which will contain the headers and keyfile to be used.
+
+<br/>
+<details open="open">
+<summary><b>Creating an encrypted loop device</b></summary>
+<br/>
+An encrypted loop device can be created to contain the block headers and keyfile quite easily.
+<br/>
+<br/>
+
+1. Create the file to be encrypted and associated with loop.
+```
+dd if=/dev/urandom of=/tmp/crypto_loop.bin bs=20M count=1 iflag=fullblock
+```
+
+2. Using `cryptsetup`, create an encrypted loop.
+```
+cryptsetup luksFormat -y -h sha512 -s 512 --type luks1 /tmp/crypto_loop.bin
+```
+
+3. Open the encrypted loop and build the filesystem.
+```
+cryptsetup open /tmp/crypto_loop.bin crypto_loop
+mkfs.ext2 /dev/mapper/crypto_loop
+```
+
+4. Mount the filesystem, into which headers and keyfile will be stored.
+```
+mount /dev/mapper/crypto_loop /mnt
+```
 
 <br/>
 <details open="open">
 <summary><b>Encrypting block devices</b></summary>
 <br/>
 
-If you're just starting, you will need an [Arch Linux Installer USB](https://wiki.archlinux.org/index.php/USB_flash_installation_medium). Optionally, wipe the contents of the block devices.
+If you are doing a fresh install with an [Arch Linux Installer USB][installer], block devices can be encrypted prior to configuring the LVM. Optionally, wipe the contents of the block devices before continuing.
 <br/>
 <br/>
-```
+For example, assuming the following configuration:
+* **nvme0n1** - m.2 SSD
+* **sda** - SATA SSD
+* **sdb** - USB (to contain encrypted boot and efi)
+<br/>
+
+one might do as follows
+<br/>
+<br/>
+
+```bash
 dd if=/dev/urandom of=/dev/nvme0n1 bs=16M
-...
+dd if=/dev/urandom of=/dev/sda bs=16M
 ```
+<br/>
 
-1. Create and mount the encrypted loop device.
-```
-dd if=/dev/urandom of=/tmp/crypto_loop.bin bs=20M count=1 iflag=fullblock
-cryptsetup luksFormat -y -h sha512 -s 512 --type luks /tmp/crypto_loop.bin
-cryptsetup open /tmp/crypto_loop.bin crypto_loop
-mount /dev/mapper/crypto_loop /mnt
-```
+With the encrypted loop device mounted to /mnt headers and keyfile can now appropriately be stored,
 
-2. Use [`dd`](https://man7.org/linux/man-pages/man1/dd.1.html) to create detached headers and a keyfile.
-```
+1. Use [`dd`](https://man7.org/linux/man-pages/man1/dd.1.html) to create detached headers and a keyfile.
+```bash
 dd if=/dev/zero of=/mnt/nvme0n1_header.bin bs=4M count=1
 dd if=/dev/zero of=/mnt/sda_header.bin bs=4M count=1
 dd if=/dev/urandom of=/mnt/crypto_keyfile.bin bs=1024 count=1
 ```
 
-4. Format the drives using `cryptsetup` with detached header and keyfile.
+2. Format the devices using `cryptsetup` with detached header and keyfile.
 ```bash
 cryptsetup luksFormat --header=/mnt/nvme0n1_header.bin --key-file=/mnt/crypto_keyfile.bin --keyfile-offset=0 --keyfile-size=512 /dev/nvme0n1
 
 cryptsetup luksFormat --header=/mnt/sda_header.bin --key-file=/mnt/crypto_keyfile.bin --keyfile-offset=512 --keyfile-size=512 /dev/sda
-
-# This is the encrypted boot partition containing initramfs.
-cryptsetup luksFormat /dev/sdb2
 ```
 
-5. Open the crypts, then set up [LVM](https://wiki.archlinux.org/index.php/LVM).
+3. Open the crypts, then set up [LVM](https://wiki.archlinux.org/index.php/LVM).
 ```bash
 cryptsetup open --header=/mnt/nvme0n1_header.bin --key-file=/mnt/crypto_keyfile.bin --keyfile-offset=0 --keyfile-size=512 /dev/nvme0n1 crypt_lvm
 
@@ -133,15 +166,18 @@ lvcreate -l +20%FREE arch -n var
 lvcreate -l +100%FREE arch -n home
 ```
 
-6. Format the [logical volumes](https://wiki.archlinux.org/index.php/LVM#Logical_volumes), mount them, and continue to follow the [Arch Linux Installation Guide](https://wiki.archlinux.org/index.php/installation_guide)
+4. Build the filesystems of [logical volumes](https://wiki.archlinux.org/index.php/LVM#Logical_volumes) and make swap.
 
 ```bash
-mkfs.ext4 /dev/arch/root
-...
+mkfs.ext4 /dev/arch/root /dev/arch/var /dev/arch/home
 mkswap /dev/arch/swap
+```
 
+5. Mount the filesystems and continue to follow the [Arch Linux Installation Guide][guide].
+```
 mount /dev/arch/root /mnt
-...
+mkdir /mnt/var && mount /dev/arch/var /mnt/var
+mkdir /mnt/home && mount /dev/arch/home /mnt/home
 swapon /dev/arch/swap
 
 # Remember to mount the boot and efi partitions that are on the USB.
@@ -199,19 +235,23 @@ cryptloop=UUID=device-uuid:/crypto_loop
 Specify which devices to decrypt in the following format, device:name:header:offset:keysize:options
 e.g.
 ```
-cryptdevices=sda:crypt_home:sda_header.bin:0:512:allow-discards,readonly;nvme0n1:crypt_root:nvme_header:512:512:allow-discards
+cryptdevices=sda:crypt_backup:sda_header.bin:0:512:allow-discards,readonly;nvme0n1:crypt_root:nvme_header:512:512:allow-discards
 ```
 
 <!-- CONTRIBUTING -->
 ## Contributing
 
-Contributions are most welcome and make the open source community a great place to learn, create, and get inspired. Any contributions are most welcome.
+Contributions are most welcome and make the open source community a great place to learn, create, and get inspired. Any contributions are most welcome, but please sign your commits and follow these steps
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/noice-feature`)
 3. Commit your Changes (`git commit -m 'Added some very cool stuff here'`)
 4. Push the Changes (`git push origin feature/noice-feature`)
 5. Open a Pull Request
+
+Note: Commits must be signed.
+
+For more information on contributing and the code of conduct, read the [CONTRIBUTING](.github/CONTRIBUTING.md) doc.
 
 <!-- SECURITY POLICY -->
 ### Security Policy
@@ -229,3 +269,7 @@ Distributed under the GPL3 License. See [LICENSE](docs/LICENSE.md) for more info
 Nicolas Mark - nicolas.mark@ghostroad.studio 
 
 Project Link: [deniable-initcpio](https://github.com/nicolas-mark/deniable-initcpio)
+
+
+[installer]: https://wiki.archlinux.org/index.php/USB_flash_installation_medium
+[guide]: https://wiki.archlinux.org/index.php/installation_guide

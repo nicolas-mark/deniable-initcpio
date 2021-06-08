@@ -1,5 +1,24 @@
 #!/usr/bin/ash
 
+function get_content {
+    local path=$RANDOM
+    case ${1} in 
+        *[!0-9]*)
+            # Use a file on the device
+            # clarg1 not numeric: clarg1=filesystem, clarg2=path
+            mkdir "/$path"
+            mount -r -t "$1" "$3" "/$path"
+            dd if="/$path/$2" of="$4" >/dev/null 2>&1
+            umount "/$path"
+            ;;
+        *)
+            # Read raw data from the block device
+            # clarg1 is numeric: clarg1=offset, clarg2=length
+            dd if="$3" of="$4" bs=1 skip="$1" count="$2" >/dev/null 2>&1
+            ;;
+    esac
+}
+
 run_hook() {
     modprobe -a -q dm-crypt >/dev/null 2>&1
     modprobe -a -q loop >/dev/null 2>&1
@@ -7,6 +26,19 @@ run_hook() {
 
     # Get the loop device key file, if specified.
     cloopkey="/crypto_keyfile.bin"
+    if [ -n "$cryptkey" ]; then
+        IFS=: read ckdev ckarg1 ckarg2 <<EOF
+$cryptkey
+EOF
+
+        if [ "$ckdev" = "rootfs" ]; then
+            cloopkey=$ckarg1
+        elif resolved=$(resolve_device "${ckdev}" ${rootdelay}); then
+            get_content $ckarg1 $ckarg2 $resolved $cloopkey
+        fi
+        [ ! -f ${cloopkey} ] && echo "Loop keyfile could not be opened. Reverting to passphrase."
+    fi
+
     cloopname="crypto_loop"
 
     # Get encrypted loop device containing headers and keyfile
@@ -18,21 +50,7 @@ EOF
         if [ "$cloopdev" = "rootfs" ]; then
             cloopfile=$clarg1
         elif resolved=$(resolve_device "${cloopdev}" ${rootdelay}); then
-            case ${clarg1} in
-                *[!0-9]*)
-                    # Use a file on the device
-                    # clarg1 not numeric: clarg1=filesystem, clarg2=path
-                    mkdir /cloop
-                    mount -r -t "$clarg1" "$resolved" /cloop
-                    dd if="/cloop/$clarg2" of="$cloopfile" >/dev/null 2>&1
-                    umount /cloop
-                    ;;
-                *)
-                    # Read raw data from the block device
-                    # clarg1 is numeric: clarg1=offset, clarg2=length
-                    dd if="$resolved" of="$cloopfile" bs=1 skip="$clarg1" count="$clarg2" >/dev/null 2>&1
-                    ;;
-            esac
+            get_content $clarg1 $clarg2 $resolved $cloopfile
         fi
         [ ! -f ${cloopfile} ] && echo "Loop file does not exist."
         return 1
@@ -94,7 +112,7 @@ EOF
         IFS="$OLDIFS"
         unset OLDIFS
 
-        if resolved=$(resolve_device "${cryptdev}" ${rootdelay}); then
+        if resolved=$(resolve_device "/dev/${cryptdev}" ${rootdelay}); then
             if cryptsetup --header="/cloop/${header}" ${resolved} >/dev/null 2>&1
                 eval cryptsetup open --keyfile ${ckeyfile} --header ${header} --keyfile-offset ${offset} --keyfile-size=${keysize} ${cryptargs} ${cryptname} ${CSQUIET};
             fi
