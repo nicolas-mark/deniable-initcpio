@@ -89,7 +89,7 @@ An encrypted loop device can be created to contain the block headers and keyfile
 dd if=/dev/urandom of=/tmp/crypto_loop.bin bs=20M count=1 iflag=fullblock
 ```
 
-2. Using `cryptsetup`, create an encrypted loop.
+2. Using [`cryptsetup`][cryptsetup], create an encrypted loop.
 ```
 cryptsetup luksFormat -y -h sha512 -s 512 --type luks1 /tmp/crypto_loop.bin
 ```
@@ -131,14 +131,14 @@ dd if=/dev/urandom of=/dev/sda bs=16M
 
 With the encrypted loop device mounted to /mnt headers and keyfile can now appropriately be stored,
 
-1. Use [`dd`](https://man7.org/linux/man-pages/man1/dd.1.html) to create detached headers and a keyfile.
+1. Create detached headers and a keyfile
 ```bash
 dd if=/dev/zero of=/mnt/nvme0n1_header.bin bs=4M count=1
 dd if=/dev/zero of=/mnt/sda_header.bin bs=4M count=1
 dd if=/dev/urandom of=/mnt/crypto_keyfile.bin bs=1024 count=1
 ```
 
-2. Format the devices using `cryptsetup` with detached header and keyfile.
+2. Format the devices using [`cryptsetup`][cryptsetup] with detached header and keyfile.
 ```bash
 cryptsetup luksFormat --header=/mnt/nvme0n1_header.bin --key-file=/mnt/crypto_keyfile.bin --keyfile-offset=0 --keyfile-size=512 /dev/nvme0n1
 
@@ -249,9 +249,11 @@ Contributions are most welcome and make the open source community a great place 
 4. Push the Changes (`git push origin feature/noice-feature`)
 5. Open a Pull Request
 
-Note: Commits must be signed.
+Please sign your commits and check out [CONTRIBUTING](.github/CONTRIBUTING.md) for more detailed information.
 
-For more information on contributing and the code of conduct, read the [CONTRIBUTING](.github/CONTRIBUTING.md) doc.
+### Code of Conduct
+
+In the interest of fostering an open and welcoming environment, we pledge to make participation in our project and our community a harassment-free experience for everyone. For more detailed information on what that means, please read [CONTRIBUTING](.github/CONTRIBUTING.md).
 
 <!-- SECURITY POLICY -->
 ### Security Policy
@@ -273,3 +275,4 @@ Project Link: [deniable-initcpio](https://github.com/nicolas-mark/deniable-initc
 
 [installer]: https://wiki.archlinux.org/index.php/USB_flash_installation_medium
 [guide]: https://wiki.archlinux.org/index.php/installation_guide
+[cryptsetup]: https://linux.die.net/man/8/cryptsetup
