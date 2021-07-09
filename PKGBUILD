@@ -1,7 +1,7 @@
 # Maintainer: Nicolas Mark <nicolas.mark@ghostroad.studio>
 
 pkgname="deniable-initcpio"
-pkgver=r5.481299e
+pkgver=r2.e187d5b
 pkgrel=1
 arch=('x86_64')
 pkgdesc="Full-disk encryption initcpio hook. Reads kernel flags to decrypt loopback device containing headers and keyfiles to unlock block devices."
@@ -22,6 +22,9 @@ pkgver() {
 package() {
     cd "${pkgname}"
 
-    install -Dm644 "./deniable_hook" "/usr/lib/initcpio/hooks/deniable"
-    install -Dm644 "./deniable_install" "/usr/lib/initcpio/install/deniable"
+    make PREFIX=/usr DESTDIR="${pkgdir}" install
+    install -Dm644 "deniable_hook" "${pkgdir}/usr/lib/initcpio/hooks/deniable"
+    install -Dm644 "deniable_install" "${pkgdir}/usr/lib/initcpio/install/deniable"
+    install -Dm644 "LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+    install -Dm644 "README.md" "${pkgdir}/usr/share/doc/${pkgname}/README.md"
 }
