@@ -1,7 +1,7 @@
 # Maintainer: Nicolas Mark <nicolas.mark@ghostroad.studio>
 
 pkgname="deniable-initcpio"
-pkgver=r13.939b53c
+pkgver=r1.41b99eb
 pkgrel=1
 arch=('x86_64')
 pkgdesc="Full-disk encryption initcpio hook. Reads kernel flags to decrypt loopback device containing headers and keyfiles to unlock block devices."
