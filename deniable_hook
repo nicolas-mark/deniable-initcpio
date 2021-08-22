@@ -113,7 +113,7 @@ EOF
         unset OLDIFS
 
         if resolved=$(resolve_device "/dev/${cryptdev}" ${rootdelay}); then
-            if cryptsetup --header="/cloop/${header}" ${resolved} >/dev/null 2>&1
+            if cryptsetup isLuks --header="/cloop/${header}" ${resolved} >/dev/null 2>&1
                 eval cryptsetup open --keyfile ${ckeyfile} --header ${header} --keyfile-offset ${offset} --keyfile-size=${keysize} ${cryptargs} ${cryptname} ${CSQUIET};
             fi
         fi
