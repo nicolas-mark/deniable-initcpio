@@ -249,11 +249,11 @@ Contributions are most welcome and make the open source community a great place 
 4. Push the Changes (`git push origin feature/noice-feature`)
 5. Open a Pull Request
 
-Please sign your commits and check out [CONTRIBUTING](.github/CONTRIBUTING.md) for more detailed information.
+Please sign your commits and check out [CONTRIBUTING](docs/CONTRIBUTING.md) for more detailed information.
 
 ### Code of Conduct
 
-In the interest of fostering an open and welcoming environment, we pledge to make participation in our project and our community a harassment-free experience for everyone. For more detailed information on what that means, please read [CONTRIBUTING](.github/CONTRIBUTING.md).
+In the interest of fostering an open and welcoming environment, we pledge to make participation in our project and our community a harassment-free experience for everyone. For more detailed information on what that means, please read the [Code of Conduct](docs/CODE_OF_CONDUCT.md).
 
 <!-- SECURITY POLICY -->
 ### Security Policy
@@ -263,7 +263,7 @@ To report vulnerabilities or security concerns, please read [SECURITY](docs/SECU
 <!-- LICENSE -->
 ## License
 
-Distributed under the GPL3 License. See [LICENSE](docs/LICENSE.md) for more information.
+Distributed under the GPL3 License. See [LICENSE](LICENSE.md) for more information.
 
 <!-- CONTACT -->
 ## Contact
