@@ -253,7 +253,7 @@ Please sign your commits and check out [CONTRIBUTING](docs/CONTRIBUTING.md) for 
 
 ### Code of Conduct
 
-In the interest of fostering an open and welcoming environment, we pledge to make participation in our project and our community a harassment-free experience for everyone. For more detailed information on what that means, please read [CONTRIBUTING](docs/CONTRIBUTING.md).
+In the interest of fostering an open and welcoming environment, we pledge to make participation in our project and our community a harassment-free experience for everyone. For more detailed information on what that means, please read the [Code of Conduct](docs/CODE_OF_CONDUCT.md).
 
 <!-- SECURITY POLICY -->
 ### Security Policy
