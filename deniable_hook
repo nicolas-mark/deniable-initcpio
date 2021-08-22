@@ -113,7 +113,7 @@ EOF
         unset OLDIFS
 
         if resolved=$(resolve_device "/dev/${cryptdev}" ${rootdelay}); then
-            if cryptsetup --header="/cloop/${header}" ${resolved} >/dev/null 2>&1
+            if cryptsetup isLuks --header="/cloop/${header}" ${resolved} >/dev/null 2>&1
                 eval cryptsetup open --keyfile ${ckeyfile} --header ${header} --keyfile-offset ${offset} --keyfile-size=${keysize} ${cryptargs} ${cryptname} ${CSQUIET};
             fi
         fi
@@ -122,18 +122,6 @@ EOF
 
 
     rm -f ${cloopfile} ${cloopkey}
-
-
-
-
-    # mkdir -p /mnt
-    # cryptsetup open /secret.img cryptkey
-    # mount /dev/mapper/cryptkey /mnt
-    # cryptsetup --header /mnt/nvme_header.bin --key-file=/mnt/crypto_keyfile.bin --keyfile-offset 512 open /dev/nvme0n1 cryptlvm
-    # cryptsetup --header /mnt/sda_header.bin --key-file=/mnt/crypto_keyfile.bin --keyfile-size=512 open /dev/sda cryptext
-    
-    # umount /mnt
-    # cryptsetup close cryptkey
 } 
 # vim: set ft=sh ts=4 sw=4 et:
 
