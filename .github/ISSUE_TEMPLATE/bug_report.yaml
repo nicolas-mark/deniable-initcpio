@@ -1,0 +1,42 @@
+name: Bug Report
+description: File a bug report
+title: "[Bug] "
+labels: [bug, triage]
+assignees:
+  - nicolas-mark
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this bug.
+  - type: input
+    id: contact
+    attributes:
+      label: Contact Details
+      description: How might one reach you for more info?
+      placeholder: ex. johndoe@example.com
+    validations:
+      required: false
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Also elaborate, what was the expected behavior?
+      placeholder: Tell me what you see!
+      value: "A bug occured"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Please copy and paste any relevant log output. This will be auto-formatted, no need for backticks.
+      render: shell
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to the [Code of Conduct](../../docs/CODE_OF_CONDUCT.md)
+      options:
+        - label: I agree to the Code of Conduct
+          required: true

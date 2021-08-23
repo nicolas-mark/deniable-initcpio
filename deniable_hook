@@ -1,0 +1,127 @@
+#!/usr/bin/ash
+
+function get_content {
+    local path=$RANDOM
+    case ${1} in 
+        *[!0-9]*)
+            # Use a file on the device
+            # clarg1 not numeric: clarg1=filesystem, clarg2=path
+            mkdir "/$path"
+            mount -r -t "$1" "$3" "/$path"
+            dd if="/$path/$2" of="$4" >/dev/null 2>&1
+            umount "/$path"
+            ;;
+        *)
+            # Read raw data from the block device
+            # clarg1 is numeric: clarg1=offset, clarg2=length
+            dd if="$3" of="$4" bs=1 skip="$1" count="$2" >/dev/null 2>&1
+            ;;
+    esac
+}
+
+run_hook() {
+    modprobe -a -q dm-crypt >/dev/null 2>&1
+    modprobe -a -q loop >/dev/null 2>&1
+    [ "${quiet}" = "y" ] && CSQUIET=">/dev/null"
+
+    # Get the loop device key file, if specified.
+    cloopkey="/crypto_keyfile.bin"
+    if [ -n "$cryptkey" ]; then
+        IFS=: read ckdev ckarg1 ckarg2 <<EOF
+$cryptkey
+EOF
+
+        if [ "$ckdev" = "rootfs" ]; then
+            cloopkey=$ckarg1
+        elif resolved=$(resolve_device "${ckdev}" ${rootdelay}); then
+            get_content $ckarg1 $ckarg2 $resolved $cloopkey
+        fi
+        [ ! -f ${cloopkey} ] && echo "Loop keyfile could not be opened. Reverting to passphrase."
+    fi
+
+    cloopname="crypto_loop"
+
+    # Get encrypted loop device containing headers and keyfile
+    cloopfile="/crypto_loop.bin"
+    if [ -n "$cryptloop" ]; then
+        IFS=: read cloopdev clarg1 clarg2 <<EOF
+$cryptloop
+EOF
+        if [ "$cloopdev" = "rootfs" ]; then
+            cloopfile=$clarg1
+        elif resolved=$(resolve_device "${cloopdev}" ${rootdelay}); then
+            get_content $clarg1 $clarg2 $resolved $cloopfile
+        fi
+        [ ! -f ${cloopfile} ] && echo "Loop file does not exist."
+        return 1
+    fi
+
+    if cryptsetup isLuks ${cloopfile} >/dev/null 2>&1; then
+        dopass=1
+        # If keyfile exists, use it
+        if [ -f "/cloop/${cloopkey}" ]; then
+            if eval cryptsetup --key-file ${cloopkey} open ${cloopfile} ${cloopname} ${CSQUIET}; then
+                dopass=0
+            else
+                echo -e "Invalid keyfile. Reverting to passphrase.\n"
+            fi
+        fi
+        if [ ${dopass} -gt 0 ]; then
+            echo "Enter a valid passphrase to access the ${cloopname} loop:"
+
+            # Loop until valid password is provided.
+            while ! eval cryptsetup open ${cloopfile} ${cloopname} ${CSQUIET}; do
+                sleep 1;
+            done
+        fi
+        [ -e "/dev/mapper/${cloopname}" ] && mount -r "/dev/mapper/${cloopname}" /cloop
+    fi
+
+    # Read devices to be unlocked and mounted
+    if [ -n "${cryptdevices}" ]; then
+        IFS=';' read -a devices <<EOF
+$cryptdevices
+EOF
+    fi
+
+    for device in "${devices[@]}"; do
+        IFS=: read cryptdev cryptname header offset keysize options <<EOF
+$device
+EOF
+        if [ -b "/dev/mapper/${cryptdev}" ]; then
+            echo "Device ${cryptname} already exists."
+            continue
+        fi
+
+        set -f
+        OLDIFS="$IFS"; IFS=,
+        for cryptopt in ${cryptoptions}; do
+            case ${cryptopt} in
+                allow-discards)
+                    cryptargs="${cryptargs} --allow-discards"
+                    ;;
+                readonly)
+                    cryptargs="${cryptargs} --readonly"
+                    ;;
+                *)
+                    echo "Encryption option '${cryptopt}' not known." >&2
+                    ;;
+            esac
+        done
+        set +f
+        IFS="$OLDIFS"
+        unset OLDIFS
+
+        if resolved=$(resolve_device "/dev/${cryptdev}" ${rootdelay}); then
+            if cryptsetup isLuks --header="/cloop/${header}" ${resolved} >/dev/null 2>&1
+                eval cryptsetup open --keyfile ${ckeyfile} --header ${header} --keyfile-offset ${offset} --keyfile-size=${keysize} ${cryptargs} ${cryptname} ${CSQUIET};
+            fi
+        fi
+    done
+
+
+
+    rm -f ${cloopfile} ${cloopkey}
+} 
+# vim: set ft=sh ts=4 sw=4 et:
+

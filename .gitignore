@@ -1,0 +1,4 @@
+*.xcf
+pkg/
+src/
+deniable-initcpio/**

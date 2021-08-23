@@ -1,0 +1,47 @@
+name: Feature Request
+description: Request a feature
+title: "[Feature] "
+labels: ["feature request", "good first issue"]
+assignees:
+  - nicolas-mark
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to suggest improvements.
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type of request
+      options:
+        - Feature request
+        - Epic request
+    validations: 
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the problem
+      placeholder: Your answer
+  - type: checkboxes
+    id: impact
+    attributes:
+      label: Describe the impact that this has on users
+      options:
+        - label: Security
+        - label: Ease of use
+        - label: Efficiency
+  - type: textarea
+    id: ideas
+    attributes:
+      label: Describe any ideas you have on how to solve this request
+      description: The maintainer may enjoy brainstorming if you'd be open to it.
+      placeholder: Your answer
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to the [Code of Conduct](../../docs/CODE_OF_CONDUCT.md)
+      options:
+        - label: I agree to the Code of Conduct
+          required: true
