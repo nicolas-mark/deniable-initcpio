@@ -40,6 +40,7 @@
         <li>
             <a href="#contributing">Contributing</a>
             <ul>
+                <li><a href="#code-of-conduct">Code of Conduct</a></li>
                 <li><a href="#security-policy">Security Policy</a></li>
             </ul>
         </li>
